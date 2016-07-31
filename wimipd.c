@@ -120,6 +120,7 @@ static void print_help(const char *name)
 #endif /* COMMIT */
     { 'q', "quiet",     "Be quiet in daemon mode" },
     { 'd', "daemon",    "Detach from controlling terminal" },
+    { 'p', "pid",       "PID file" },
     { 'l', "log-level", "Syslog level from 1 to 7" },
     { 'L', "log",       "Report after specified number of requests"},
     { '4', "inet",      "Listen on IPv4 addresses" },
@@ -133,6 +134,7 @@ static void print_help(const char *name)
 int main(int argc, char *argv[])
 {
   const char    *prog_name;
+  const char    *pid_file;
   const char    *host = NULL;
   const char    *port = DEFAULT_PORT_S;
   unsigned long  server_flags = 0;
@@ -153,6 +155,7 @@ int main(int argc, char *argv[])
 #endif /* COMMIT */
     { "quiet", no_argument, NULL, 'q' },
     { "daemon", no_argument, NULL, 'd' },
+    { "pid", required_argument, NULL, 'p' },
     { "log-level", required_argument, NULL, 'l' },
     { "log", required_argument, NULL, 'L' },
     { "inet", no_argument, NULL, '4' },
@@ -163,7 +166,7 @@ int main(int argc, char *argv[])
   prog_name = basename(argv[0]);
 
   while(1) {
-    int c = getopt_long(argc, argv, "hVqdl:L:46", opts, NULL);
+    int c = getopt_long(argc, argv, "hVqdp:l:L:46", opts, NULL);
 
     if(c == -1)
       break;
@@ -173,6 +176,9 @@ int main(int argc, char *argv[])
       break;
     case 'd':
       server_flags |= SRV_DAEMON;
+      break;
+    case 'p':
+      pid_file = optarg;
       break;
     case 'l':
       log_level = xatou(optarg, &err_atoi);
@@ -259,6 +265,9 @@ int main(int argc, char *argv[])
   setlogmask(log_level);
   openlog(prog_name, LOG_CONS | LOG_NDELAY, LOG_DAEMON | LOG_LOCAL1);
 
+  /* start notification */
+  syslog(LOG_NOTICE, PACKAGE " v" PACKAGE_VERSION " starting...");
+
   /* daemon mode */
   if(server_flags & SRV_DAEMON) {
     if(daemon(0, !(server_flags & SRV_QUIET)) < 0) {
@@ -268,8 +277,7 @@ int main(int argc, char *argv[])
     syslog(LOG_INFO, "switched to daemon mode");
   }
 
-  /* start notification */
-  syslog(LOG_NOTICE, PACKAGE " v" PACKAGE_VERSION " starting...");
+  /* TODO: write pid file */
 
   setup_signals();
 EXIT:

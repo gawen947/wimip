@@ -46,10 +46,10 @@
 #include "common.h"
 
 #define TRIES       1
-#define TIMEOUT     2000             /* default timeout */
-#define PAYLOAD_LEN 8                /* default (random) payload len */
-#define PAYLOAD_MAX 1024             /* max size for the payload */
-#define MESSAGE_MAX 32 + PAYLOAD_MAX /* max len for message buffer */
+#define TIMEOUT     2000         /* default timeout */
+#define KEY_LEN     8            /* default (random) key len */
+#define KEY_MAX     1024         /* max size for the key */
+#define MESSAGE_MAX 32 + KEY_MAX /* max len for message buffer */
 #define ADDRSTRLEN  MAX(INET_ADDRSTRLEN, INET6_ADDRSTRLEN) /* max len for address representation */
 
 enum req_flags {
@@ -150,7 +150,7 @@ static void display_timeout(const struct addrinfo *resolution,
 }
 
 static int response(const unsigned char *res, unsigned int size,
-                    const unsigned char *payload, unsigned int payload_len,
+                    const unsigned char *key, unsigned int key_len,
                     const struct addrinfo *resolution, const struct remote *remote,
                     unsigned long flags)
 {
@@ -162,14 +162,14 @@ static int response(const unsigned char *res, unsigned int size,
     display_request(resolution, remote, flags);
 
   /* check size, inet_ntop() doesn't */
-  if(size != payload_len + addrlen) {
+  if(size != key_len + addrlen) {
     printf("invalid answer for %s", af_str(resolution->ai_family));
     return -1;
   }
 
-  /* check received payload */
-  if(memcmp(payload, res + addrlen, payload_len)) {
-    printf("invalid payload");
+  /* check received key */
+  if(memcmp(key, res + addrlen, key_len)) {
+    printf("invalid key");
     return -1;
   }
 
@@ -191,7 +191,7 @@ static void display_rtt(struct timespec *begin, struct timespec *end)
 }
 
 static int send_request(const struct addrinfo *resolution, const struct remote *remote,
-                        const unsigned char *payload, unsigned int payload_len,
+                        const unsigned char *key, unsigned int key_len,
                         unsigned long flags, unsigned int timeout)
 {
   unsigned char message_buffer[MESSAGE_MAX];
@@ -208,7 +208,7 @@ static int send_request(const struct addrinfo *resolution, const struct remote *
 
   /* send datagram */
   clock_gettime(CLOCK_MONOTONIC, &begin);
-  n = sendto(sd, payload, payload_len, 0, resolution->ai_addr, resolution->ai_addrlen);
+  n = sendto(sd, key, key_len, 0, resolution->ai_addr, resolution->ai_addrlen);
   if(n < 0) {
     warn("cannot send message");
     return -1;
@@ -236,7 +236,7 @@ static int send_request(const struct addrinfo *resolution, const struct remote *
   clock_gettime(CLOCK_MONOTONIC, &end);
 
   /* process response */
-  n = response(message_buffer, n, payload, payload_len, resolution, remote, flags);
+  n = response(message_buffer, n, key, key_len, resolution, remote, flags);
   if(n < 0) { /* response() warns */
     putc('\n', stdout);
     return -1;
@@ -251,7 +251,7 @@ static int send_request(const struct addrinfo *resolution, const struct remote *
   return 0;
 }
 
-static int request(const char *remote, const unsigned char *payload, unsigned int len,
+static int request(const char *remote, const unsigned char *key, unsigned int len,
                    unsigned long flags, unsigned int timeout, unsigned int try)
 {
   struct addrinfo *resolution, *r;
@@ -278,7 +278,7 @@ static int request(const char *remote, const unsigned char *payload, unsigned in
   /* send a message to all resolved IPs and break on first success */
   while(try--) {
     for(r = resolution ; r ; r = r->ai_next) {
-      err = send_request(r, parsed_remote, payload, len, flags, timeout);
+      err = send_request(r, parsed_remote, key, len, flags, timeout);
 
       if(!err) { /* success */
         ret = 0;
@@ -304,7 +304,7 @@ static void print_help(const char *name)
 #endif /* COMMIT */
     { 't', "rtt",     "Display round-trip-time" },
     { 'n', "try",     "Number of tries" },
-    { 'l', "len",     "Random payload length" },
+    { 'l', "len",     "Random key length" },
     { 'T', "timeout", "Response timeout" },
     { 'q', "quiet",   "Only display received IPs" },
     { '4', "inet",    "Resolve only IPv4 addresses" },
@@ -318,9 +318,9 @@ static void print_help(const char *name)
 int main(int argc, char *argv[])
 {
   const char    *prog_name;
-  unsigned char  payload[PAYLOAD_MAX];
+  unsigned char  key[KEY_MAX];
   unsigned long  request_flags = 0;
-  unsigned int   payload_len   = PAYLOAD_LEN;
+  unsigned int   key_len       = KEY_LEN;
   unsigned int   timeout       = TIMEOUT;
   unsigned int   try           = TRIES;
   int            exit_status   = EXIT_FAILURE;
@@ -355,9 +355,9 @@ int main(int argc, char *argv[])
       break;
     switch(c) {
     case 'l':
-      payload_len = xatou(optarg, &err_atoi);
-      if(err_atoi || payload_len > PAYLOAD_MAX)
-        errx(EXIT_FAILURE, "invalid payload length");
+      key_len = xatou(optarg, &err_atoi);
+      if(err_atoi || key_len > KEY_MAX)
+        errx(EXIT_FAILURE, "invalid key length");
       break;
     case 't':
       request_flags |= REQ_RTT;
@@ -407,14 +407,14 @@ int main(int argc, char *argv[])
     goto EXIT;
   }
 
-  /* configure payload */
-  arc4random_buf(payload, payload_len);
+  /* configure key */
+  arc4random_buf(key, key_len);
 
   exit_status = EXIT_SUCCESS;
 
   /* process the requests from here */
   for(i = 0 ; i < argc ; i++) {
-    if(request(argv[i], payload, payload_len, request_flags, timeout, try) < 0)
+    if(request(argv[i], key, key_len, request_flags, timeout, try) < 0)
       exit_status = EXIT_FAILURE;
   }
 
