@@ -48,7 +48,7 @@
 #define TRIES       1
 #define TIMEOUT     2000         /* default timeout */
 #define KEY_LEN     8            /* default (random) key len */
-#define KEY_MAX     1024         /* max size for the key */
+#define KEY_MAX     128          /* max size for the key */
 #define MESSAGE_MAX 32 + KEY_MAX /* max len for message buffer */
 #define ADDRSTRLEN  MAX(INET_ADDRSTRLEN, INET6_ADDRSTRLEN) /* max len for address representation */
 
