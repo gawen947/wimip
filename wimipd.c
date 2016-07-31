@@ -120,6 +120,8 @@ static void print_help(const char *name)
 #endif /* COMMIT */
     { 'q', "quiet",     "Be quiet in daemon mode" },
     { 'd', "daemon",    "Detach from controlling terminal" },
+    { 'U', "user",      "Relinquish privileges" },
+    { 'G', "group",     "Relinquish privileges" },
     { 'p', "pid",       "PID file" },
     { 'l', "log-level", "Syslog level from 1 to 7" },
     { 'L', "log",       "Report after specified number of requests"},
@@ -137,6 +139,8 @@ int main(int argc, char *argv[])
   const char    *pid_file;
   const char    *host = NULL;
   const char    *port = DEFAULT_PORT_S;
+  const char    *user;
+  const char    *group;
   unsigned long  server_flags = 0;
   unsigned int   log_level    = LOG_UPTO(LOG_NOTICE);
   unsigned int   log          = 0;
@@ -155,6 +159,8 @@ int main(int argc, char *argv[])
 #endif /* COMMIT */
     { "quiet", no_argument, NULL, 'q' },
     { "daemon", no_argument, NULL, 'd' },
+    { "user", required_argument, NULL, 'U' },
+    { "group", required_argument, NULL, 'G' },
     { "pid", required_argument, NULL, 'p' },
     { "log-level", required_argument, NULL, 'l' },
     { "log", required_argument, NULL, 'L' },
@@ -166,7 +172,7 @@ int main(int argc, char *argv[])
   prog_name = basename(argv[0]);
 
   while(1) {
-    int c = getopt_long(argc, argv, "hVqdp:l:L:46", opts, NULL);
+    int c = getopt_long(argc, argv, "hVqdU:G:p:l:L:46", opts, NULL);
 
     if(c == -1)
       break;
@@ -278,6 +284,8 @@ int main(int argc, char *argv[])
   }
 
   /* TODO: write pid file */
+
+  /* TODO: drop privileges */
 
   setup_signals();
 EXIT:
