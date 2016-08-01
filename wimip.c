@@ -271,7 +271,7 @@ static int request(const char *remote, const unsigned char *key, unsigned int le
   if(flags & REQ_AF_INET6)
     hints.ai_family = AF_INET6;
 
-  err = getaddrinfo(parsed_remote->host, "18768", &hints, &resolution);
+  err = getaddrinfo(parsed_remote->host, parsed_remote->port, &hints, &resolution);
   if(err)
     errx(EXIT_FAILURE, "cannot resolve '%s': %s", parsed_remote->host, gai_strerror(err));
 
