@@ -330,8 +330,6 @@ int main(int argc, char *argv[])
     drop_privileges(user, group);
   }
 
-  /* TODO: drop privileges */
-
   setup_signals();
 EXIT:
   exit(exit_status);
