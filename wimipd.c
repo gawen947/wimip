@@ -22,6 +22,9 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sys/types.h>
+#include <pwd.h>
+#include <grp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,6 +35,7 @@
 #include <syslog.h>
 #include <err.h>
 
+#include "safe-call.h"
 #include "xatoi.h"
 #include "common.h"
 #include "help.h"
@@ -110,6 +114,33 @@ static int daemon(int nochdir, int noclose)
 }
 #endif
 
+static void write_pid(const char *pid_file)
+{
+  char buf[32];
+  int fd = xopen(pid_file, O_WRONLY | O_TRUNC | O_CREAT, 0);
+
+  sprintf(buf, "%d\n", getpid());
+
+  write(fd, buf, strlen(buf));
+
+  close(fd);
+}
+
+static void drop_privileges(const char *user, const char *group)
+{
+  struct passwd *user_pwd  = getpwnam(user);
+  struct group  *group_pwd = getgrnam(group);
+
+  if(!user_pwd)
+    errx(EXIT_FAILURE, "invalid user");
+  if(!group_pwd)
+    errx(EXIT_FAILURE, "invalid group");
+
+  if(setgid(group_pwd->gr_gid) ||
+     setuid(user_pwd->pw_uid))
+    err(EXIT_FAILURE, "cannot drop privileges");
+}
+
 static void print_help(const char *name)
 {
   struct opt_help messages[] = {
@@ -137,10 +168,10 @@ int main(int argc, char *argv[])
 {
   const char    *prog_name;
   const char    *pid_file;
-  const char    *host = NULL;
-  const char    *port = DEFAULT_PORT_S;
-  const char    *user;
-  const char    *group;
+  const char    *host         = NULL;
+  const char    *port         = DEFAULT_PORT_S;
+  const char    *user         = NULL;
+  const char    *group        = NULL;
   unsigned long  server_flags = 0;
   unsigned int   log_level    = LOG_UPTO(LOG_NOTICE);
   unsigned int   log          = 0;
@@ -182,6 +213,12 @@ int main(int argc, char *argv[])
       break;
     case 'd':
       server_flags |= SRV_DAEMON;
+      break;
+    case 'U':
+      user = optarg;
+      break;
+    case 'G':
+      group = optarg;
       break;
     case 'p':
       pid_file = optarg;
@@ -283,7 +320,15 @@ int main(int argc, char *argv[])
     syslog(LOG_INFO, "switched to daemon mode");
   }
 
-  /* TODO: write pid file */
+  if(pid_file)
+    write_pid(pid_file);
+
+  if(user || group) {
+    if(!user || !group)
+      errx(EXIT_FAILURE, "user and group required");
+
+    drop_privileges(user, group);
+  }
 
   /* TODO: drop privileges */
 
