@@ -173,18 +173,20 @@ static void answer(int sd, const unsigned char *buffer, ssize_t size,
 static void server(int sd, unsigned long flags)
 {
   while(1) {
-    struct sockaddr from;
-    socklen_t from_len;
+    struct sockaddr_storage from;
+    socklen_t from_len = sizeof(from);
     unsigned char request_buffer[REQUEST_MAX];
     ssize_t n;
 
-    n = recvfrom(sd, request_buffer, REQUEST_MAX, 0, &from, &from_len);
+    n = recvfrom(sd, request_buffer, REQUEST_MAX, 0, (struct sockaddr *)&from, &from_len);
     if(n < 0) {
       syslog(LOG_ERR, "network error: %s", strerror(errno));
       err(EXIT_FAILURE, "network error");
     }
 
-    answer(sd, request_buffer, n, &from, from_len, flags);
+    answer(sd, request_buffer, n, (struct sockaddr *)&from, from_len, flags);
+
+    /* TODO: increment count and log stats if needed */
   }
 }
 
