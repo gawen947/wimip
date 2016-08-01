@@ -25,14 +25,21 @@
 #ifndef _COMMON_H_
 #define _COMMON_H_
 
+#include <sys/socket.h>
+
 #include "version.h"
 
 #define UNUSED(x) (void)(x)
 #define sizeof_array(x) (sizeof(x) / sizeof((x)[0]))
 
-#define DEFAULT_PORT   18768      /* 0x4950 -> IP */
+#define KEY_MAX        16               /* max size for the key */
+#define REQUEST_MAX    KEY_MAX          /* max len for request */
+#define ANSWER_MAX     32 + REQUEST_MAX /* max len for answer  */
+#define DEFAULT_PORT   18768            /* 0x4950 -> IP */
 #define DEFAULT_PORT_S stringify(DEFAULT_PORT)
 
 const char * basename(const char *s);
+unsigned int sockaddr_addrlen(const struct sockaddr *saddr);
+const void * sockaddr_addr(const struct sockaddr *saddr);
 
 #endif /* _COMMON_H_ */

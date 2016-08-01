@@ -23,6 +23,10 @@
  */
 
 #include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 #include <pwd.h>
 #include <grp.h>
 #include <stdio.h>
@@ -33,9 +37,12 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <syslog.h>
+#include <errno.h>
+#include <assert.h>
 #include <err.h>
 
 #include "safe-call.h"
+#include "af-str.h"
 #include "xatoi.h"
 #include "common.h"
 #include "help.h"
@@ -141,6 +148,98 @@ static void drop_privileges(const char *user, const char *group)
     err(EXIT_FAILURE, "cannot drop privileges");
 }
 
+static void answer(int sd, const unsigned char *buffer, ssize_t size,
+                   const struct sockaddr *from, socklen_t from_len,
+                   unsigned long flags)
+{
+  unsigned char answer_buffer[ANSWER_MAX];
+  unsigned int  len = sockaddr_addrlen(from);
+  ssize_t n;
+
+  UNUSED(flags);
+
+  assert(size + len < ANSWER_MAX);
+
+  memcpy(answer_buffer, sockaddr_addr(from), len);
+  memcpy(answer_buffer + len, buffer, size);
+
+  n = sendto(sd, answer_buffer, len + size, 0, from, from_len);
+  if(n < 0) {
+    syslog(LOG_ERR, "network error: %s", strerror(errno));
+    warn("network error");
+  }
+}
+
+static void server(int sd, unsigned long flags)
+{
+  while(1) {
+    struct sockaddr from;
+    socklen_t from_len;
+    unsigned char request_buffer[REQUEST_MAX];
+    ssize_t n;
+
+    n = recvfrom(sd, request_buffer, REQUEST_MAX, 0, &from, &from_len);
+    if(n < 0) {
+      syslog(LOG_ERR, "network error: %s", strerror(errno));
+      err(EXIT_FAILURE, "network error");
+    }
+
+    answer(sd, request_buffer, n, &from, from_len, flags);
+  }
+}
+
+static void bind_server(const char *host, const char *port, unsigned long flags)
+{
+  struct addrinfo *resolution, *r;
+  struct addrinfo hints;
+  int err, sd;
+
+  memset(&hints, 0, sizeof(hints));
+  hints = (struct addrinfo){ .ai_family   = AF_UNSPEC,
+                             .ai_socktype = SOCK_DGRAM,
+                             .ai_flags    = AI_PASSIVE,
+                             .ai_protocol = IPPROTO_UDP };
+
+  /* select address family */
+  if(flags & SRV_AF_INET)
+    hints.ai_family = AF_INET;
+  if(flags & SRV_AF_INET6)
+    hints.ai_family = AF_INET6;
+
+  err = getaddrinfo(host, port, &hints, &resolution);
+  if(err)
+    errx(EXIT_FAILURE, "cannot resolve requested address: %s", gai_strerror(err));
+
+  /* bind to the first working address */
+  for(r = resolution ; r ; r = r->ai_next) {
+    sd = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
+    if(sd < 0) {
+      warn("cannot create socket %s", af_str(r->ai_family));
+      continue;
+    }
+
+    err = bind(sd, r->ai_addr, r->ai_addrlen);
+    if(err < 0) {
+      warn("cannot bind to address");
+      close(sd);
+      continue;
+    }
+
+    break;
+  }
+
+  if(!r) {
+    syslog(LOG_ERR, "cannot bind to any address");
+    errx(EXIT_FAILURE, "cannot bind to any address");
+  }
+
+  freeaddrinfo(resolution);
+
+  syslog(LOG_INFO, "bind to %s:%s", host_name, port_name);
+
+  server(sd, flags);
+}
+
 static void print_help(const char *name)
 {
   struct opt_help messages[] = {
@@ -167,7 +266,7 @@ static void print_help(const char *name)
 int main(int argc, char *argv[])
 {
   const char    *prog_name;
-  const char    *pid_file;
+  const char    *pid_file     = NULL;
   const char    *host         = NULL;
   const char    *port         = DEFAULT_PORT_S;
   const char    *user         = NULL;
@@ -298,6 +397,10 @@ int main(int argc, char *argv[])
     goto EXIT;
   }
 
+  /* some users may use '*' for ADDR_ANY */
+  if(host && !strcmp(host, "*"))
+    host = NULL;
+
   /* display bind in syslog */
   host_name = host;
   port_name = port;
@@ -320,6 +423,11 @@ int main(int argc, char *argv[])
     syslog(LOG_INFO, "switched to daemon mode");
   }
 
+  /* setup:
+      - write pid
+      - drop privileges
+      - setup signals
+  */
   if(pid_file)
     write_pid(pid_file);
 
@@ -331,6 +439,10 @@ int main(int argc, char *argv[])
   }
 
   setup_signals();
+
+  /* start the server now */
+  bind_server(host, port, server_flags);
+
 EXIT:
   exit(exit_status);
 }

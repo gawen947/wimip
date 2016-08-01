@@ -48,8 +48,6 @@
 #define TRIES       1
 #define TIMEOUT     2000         /* default timeout */
 #define KEY_LEN     8            /* default (random) key len */
-#define KEY_MAX     16           /* max size for the key */
-#define MESSAGE_MAX 32 + KEY_MAX /* max len for message buffer */
 #define ADDRSTRLEN  MAX(INET_ADDRSTRLEN, INET6_ADDRSTRLEN) /* max len for address representation */
 
 enum req_flags {
@@ -87,32 +85,6 @@ static const struct remote * parse_remote(const char *remote)
   /* we are all done!
      the structure shall be freed later by the caller */
   return parsed_remote;
-}
-
-static unsigned int sockaddr_addrlen(const struct sockaddr *saddr)
-{
-  switch(saddr->sa_family) {
-  case AF_INET:
-    return sizeof(((struct sockaddr_in *)saddr)->sin_addr);
-  case AF_INET6:
-    return sizeof(((struct sockaddr_in6 *)saddr)->sin6_addr);
-  }
-
-  assert(0); /* unsupported address family */
-  return 0;
-}
-
-static const void * sockaddr_addr(const struct sockaddr *saddr)
-{
-  switch(saddr->sa_family) {
-  case AF_INET:
-    return &((struct sockaddr_in *)saddr)->sin_addr;
-  case AF_INET6:
-    return &((struct sockaddr_in6 *)saddr)->sin6_addr;
-  }
-
-  assert(0); /* unsupported address family */
-  return 0;
 }
 
 static void display_request(const struct addrinfo *resolution,
@@ -194,7 +166,7 @@ static int send_request(const struct addrinfo *resolution, const struct remote *
                         const unsigned char *key, unsigned int key_len,
                         unsigned long flags, unsigned int timeout)
 {
-  unsigned char message_buffer[MESSAGE_MAX];
+  unsigned char message_buffer[MAX(REQUEST_MAX, ANSWER_MAX)];
   struct timespec begin, end;
   struct timeval tv_timeout;
   ssize_t n;
@@ -221,7 +193,7 @@ static int send_request(const struct addrinfo *resolution, const struct remote *
   setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, &tv_timeout, sizeof(struct timeval));
 
   /* receive response */
-  n = read(sd, message_buffer, MESSAGE_MAX);
+  n = read(sd, message_buffer, ANSWER_MAX);
   if(n < 0) {
     if(errno == EAGAIN) { /* timeout */
       if(!(flags & REQ_QUIET)) {

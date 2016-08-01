@@ -9,7 +9,7 @@ DEP  = $(SRC:.c=.d)
 
 TARGETS     = wimip wimipd
 
-SERVER_OBJ = wimipd.o help.o xatoi.o version.o
+SERVER_OBJ = wimipd.o help.o xatoi.o version.o safe-call.o af-str.o common.o
 CLIENT_OBJ = wimip.o help.o safe-call.o version.o common.o xatoi.o time-substract.o scale.o af-str.o
 
 PREFIX  ?= /usr/local

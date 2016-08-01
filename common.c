@@ -22,7 +22,11 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <string.h>
+#include <assert.h>
 
 #include "common.h"
 
@@ -33,3 +37,29 @@ const char * basename(const char *s)
   return base;
 }
 
+/* TODO: move to sockaddr.c */
+unsigned int sockaddr_addrlen(const struct sockaddr *saddr)
+{
+  switch(saddr->sa_family) {
+  case AF_INET:
+    return sizeof(((struct sockaddr_in *)saddr)->sin_addr);
+  case AF_INET6:
+    return sizeof(((struct sockaddr_in6 *)saddr)->sin6_addr);
+  }
+
+  assert(0); /* unsupported address family */
+  return 0;
+}
+
+const void * sockaddr_addr(const struct sockaddr *saddr)
+{
+  switch(saddr->sa_family) {
+  case AF_INET:
+    return &((struct sockaddr_in *)saddr)->sin_addr;
+  case AF_INET6:
+    return &((struct sockaddr_in6 *)saddr)->sin6_addr;
+  }
+
+  assert(0); /* unsupported address family */
+  return 0;
+}
