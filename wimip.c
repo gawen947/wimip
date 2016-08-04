@@ -74,8 +74,8 @@ static const struct remote * parse_remote(const char *remote)
   memcpy(parsed_remote->host, remote, remote_len);
 
   /* tokenize the remote and eventually break on the port number */
-  strtok_r(parsed_remote->host, ":", &brk);
-  port = strtok_r(NULL, ":", &brk);
+  strtok_r(parsed_remote->host, "/", &brk);
+  port = strtok_r(NULL, "/", &brk);
 
   if(!port) /* no port specified, we fallback on the default port */
     parsed_remote->port = DEFAULT_PORT_S;
@@ -284,7 +284,7 @@ static void print_help(const char *name)
     { 0, NULL, NULL }
   };
 
-  help(name, "[OPTIONS] servers...", messages);
+  help(name, "[OPTIONS] remote[/port]...", messages);
 }
 
 int main(int argc, char *argv[])

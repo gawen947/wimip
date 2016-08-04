@@ -262,7 +262,7 @@ static void print_help(const char *name)
     { 0, NULL, NULL }
   };
 
-  help(name, "[OPTIONS] [host][:port]", messages);
+  help(name, "[OPTIONS] [host][/port]", messages);
 }
 
 int main(int argc, char *argv[])
@@ -270,7 +270,7 @@ int main(int argc, char *argv[])
   const char    *prog_name;
   const char    *pid_file     = NULL;
   const char    *host         = NULL;
-  const char    *port         = DEFAULT_PORT_S;
+  const char    *port         = NULL;
   const char    *user         = NULL;
   const char    *group        = NULL;
   unsigned long  server_flags = 0;
@@ -391,8 +391,8 @@ int main(int argc, char *argv[])
 
   /* parse address and port number */
   if(argc == 1) {
-    host = strtok(argv[0], ":");
-    port = strtok(NULL, ":");
+    host = strtok(argv[0], "/");
+    port = strtok(NULL, "/");
   }
   else if (argc > 1) {
     print_help(prog_name);
@@ -402,6 +402,10 @@ int main(int argc, char *argv[])
   /* some users may use '*' for ADDR_ANY */
   if(host && !strcmp(host, "*"))
     host = NULL;
+
+  /* configure default port */
+  if(!port)
+    port = DEFAULT_PORT_S;
 
   /* display bind in syslog */
   host_name = host;
