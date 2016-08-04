@@ -61,6 +61,7 @@ static const char    *port_name;
 static void log_req_number(void)
 {
   syslog(LOG_INFO, "%s:%s requests: %lu", host_name, port_name, req_count);
+  printf("requests: %lu\n", req_count);
 }
 
 static void sig_log(int signum)
@@ -170,7 +171,7 @@ static void answer(int sd, const unsigned char *buffer, ssize_t size,
   }
 }
 
-static void server(int sd, unsigned long flags)
+static void server(int sd, unsigned int log, unsigned long flags)
 {
   while(1) {
     struct sockaddr_storage from;
@@ -178,19 +179,24 @@ static void server(int sd, unsigned long flags)
     unsigned char request_buffer[REQUEST_MAX];
     ssize_t n;
 
+  INTR: /* syscall may be interrupted by stats signal (SIGUSR) */
     n = recvfrom(sd, request_buffer, REQUEST_MAX, 0, (struct sockaddr *)&from, &from_len);
     if(n < 0) {
+      if(errno == EINTR)
+        goto INTR;
       syslog(LOG_ERR, "network error: %s", strerror(errno));
       err(EXIT_FAILURE, "network error");
     }
 
     answer(sd, request_buffer, n, (struct sockaddr *)&from, from_len, flags);
 
-    /* TODO: increment count and log stats if needed */
+    req_count++;
+    if(log && !(req_count % log))
+      log_req_number();
   }
 }
 
-static void bind_server(const char *host, const char *port, unsigned long flags)
+static void bind_server(const char *host, const char *port, unsigned int log, unsigned long flags)
 {
   struct addrinfo *resolution, *r;
   struct addrinfo hints;
@@ -239,7 +245,7 @@ static void bind_server(const char *host, const char *port, unsigned long flags)
 
   syslog(LOG_INFO, "bind to %s:%s", host_name, port_name);
 
-  server(sd, flags);
+  server(sd, log, flags);
 }
 
 static void print_help(const char *name)
@@ -447,7 +453,7 @@ int main(int argc, char *argv[])
   setup_signals();
 
   /* start the server now */
-  bind_server(host, port, server_flags);
+  bind_server(host, port, log, server_flags);
 
 EXIT:
   exit(exit_status);
