@@ -65,7 +65,7 @@ struct remote {
 static const struct remote * parse_remote(const char *remote)
 {
   int remote_len  = strlen(remote);
-  struct remote *parsed_remote = xmalloc(sizeof(struct remote) + remote_len);
+  struct remote *parsed_remote = xmalloc(sizeof(struct remote) + remote_len + 1);
   const char *port;
   char *brk;
 
