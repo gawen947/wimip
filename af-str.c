@@ -36,7 +36,20 @@ const char * af_str(unsigned int af)
     AF(UNIX);
     AF(INET);
     AF(INET6);
+    AF(SNA);
+    AF(DECnet);
+    AF(APPLETALK);
+    AF(ROUTE);
+    AF(IPX);
+    AF(ISDN);
+    AF(BLUETOOTH);
+#ifdef __FreeBSD__
+    AF(ARP);
+    AF(IEEE80211);
+    AF(INET_SDP);
+    AF(INET6_SDP);
     AF(IMPLINK);
+    AF(LINK);
     AF(PUP);
     AF(CHAOS);
     AF(NETBIOS);
@@ -44,29 +57,18 @@ const char * af_str(unsigned int af)
     AF(ECMA);
     AF(DATAKIT);
     AF(CCITT);
-    AF(SNA);
-    AF(DECnet);
     AF(DLI);
     AF(LAT);
     AF(HYLINK);
-    AF(APPLETALK);
-    AF(ROUTE);
-    AF(LINK);
     AF(COIP);
     AF(CNT);
-    AF(IPX);
     AF(SIP);
-    AF(ISDN);
     AF(NATM);
     AF(ATM);
     AF(NETGRAPH);
     AF(SLOW);
     AF(SCLUSTER);
-    AF(ARP);
-    AF(BLUETOOTH);
-    AF(IEEE80211);
-    AF(INET_SDP);
-    AF(INET6_SDP);
+#endif /* __FreeBSD__ */
   default:
     return "unknown AF";
   }

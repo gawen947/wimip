@@ -26,6 +26,7 @@
 #define _TIME_SUBSTRACT_H_
 
 #include <sys/types.h>
+#include <time.h>
 #include <stdint.h>
 
 int timespec_substract(struct timespec *result, struct timespec *x, struct timespec *y);

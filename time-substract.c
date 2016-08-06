@@ -24,6 +24,7 @@
 
 #include <sys/types.h>
 #include <stdint.h>
+#include <time.h>
 #include <assert.h>
 
 #include "common.h"

@@ -32,9 +32,14 @@
 #include <stdint.h>
 #include <getopt.h>
 #include <string.h>
+#include <time.h>
 #include <err.h>
 #include <errno.h>
 #include <assert.h>
+
+#ifdef __linux__
+# include <bsd/stdlib.h>
+#endif /* __linux__ */
 
 #include "help.h"
 #include "time-substract.h"
@@ -95,7 +100,7 @@ static void display_request(const struct addrinfo *resolution,
 
   UNUSED(flags);
 
-  if(remote->port != DEFAULT_PORT_S)
+  if(!strcmp(remote->port,DEFAULT_PORT_S))
     printf("%s:%s", remote->host, remote->port);
   else
     printf("%s", remote->host);

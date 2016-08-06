@@ -16,6 +16,13 @@ PREFIX  ?= /usr/local
 BIN     ?= /bin
 SBIN    ?= /sbin
 
+# glibc FTM
+CFLAGS += -D_BSD_SOURCE=1 -D_POSIX_C_SOURCE=199309L
+
+ifeq ($(OS),Linux)
+	LDFLAGS := -lbsd
+endif
+
 commit = $(shell ./hash.sh)
 ifneq ($(commit), UNKNOWN)
 	CFLAGS += -DCOMMIT="\"$(commit)\""
