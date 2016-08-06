@@ -423,7 +423,7 @@ int main(int argc, char *argv[])
   openlog(prog_name, LOG_CONS | LOG_NDELAY, LOG_DAEMON | LOG_LOCAL1);
 
   /* start notification */
-  syslog(LOG_NOTICE, PACKAGE " v" PACKAGE_VERSION " starting...");
+  syslog(LOG_NOTICE, "%s (%s) from " PACKAGE_VERSION " starting...", prog_name, "server");
 
   /* daemon mode */
   if(server_flags & SRV_DAEMON) {
