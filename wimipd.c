@@ -91,8 +91,7 @@ static void setup_signals(void)
   setup_siglist(signals_log, &act_log, sizeof_array(signals_log));
 }
 
-//#if !(defined _BSD_SOURCE || (defined _XOPEN_SOURCE && defined _XOPEN_SOURCE > 500))
-#if 0
+#if 0 /* for targets that do not implement daemon() */
 static int daemon(int nochdir, int noclose)
 {
   int fd;
