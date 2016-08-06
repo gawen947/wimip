@@ -60,7 +60,7 @@ static const char    *port_name;
 
 static void log_req_number(void)
 {
-  syslog(LOG_INFO, "%s/%s requests: %lu", host_name, port_name, req_count);
+  syslog(LOG_NOTICE, "%s/%s requests: %lu", host_name, port_name, req_count);
   printf("requests: %lu\n", req_count);
 }
 
