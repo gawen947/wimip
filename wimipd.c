@@ -60,7 +60,7 @@ static const char    *port_name;
 
 static void log_req_number(void)
 {
-  syslog(LOG_INFO, "%s:%s requests: %lu", host_name, port_name, req_count);
+  syslog(LOG_INFO, "%s/%s requests: %lu", host_name, port_name, req_count);
   printf("requests: %lu\n", req_count);
 }
 
@@ -243,7 +243,7 @@ static void bind_server(const char *host, const char *port, unsigned int log, un
 
   freeaddrinfo(resolution);
 
-  syslog(LOG_INFO, "bind to %s:%s", host_name, port_name);
+  syslog(LOG_INFO, "bind to %s/%s", host_name, port_name);
 
   server(sd, log, flags);
 }

@@ -100,8 +100,8 @@ static void display_request(const struct addrinfo *resolution,
 
   UNUSED(flags);
 
-  if(!strcmp(remote->port,DEFAULT_PORT_S))
-    printf("%s:%s", remote->host, remote->port);
+  if(strcmp(remote->port,DEFAULT_PORT_S))
+    printf("%s/%s", remote->host, remote->port);
   else
     printf("%s", remote->host);
 
