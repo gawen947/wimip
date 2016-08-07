@@ -90,7 +90,7 @@ static void load_stat(void)
   int  err_atoi;
   int  fd;
 
-  /* only save when needed */
+  /* only load when needed */
   if(!stat_file)
     return;
 
@@ -457,7 +457,7 @@ int main(int argc, char *argv[])
       break;
     case 'S':
       stat_file = optarg;
-      load_stat();
+      /* load stat after opening syslog */
       break;
     case '4':
       server_flags |= SRV_AF_INET;
@@ -504,11 +504,9 @@ int main(int argc, char *argv[])
   if(!port)
     port = DEFAULT_PORT_S;
 
-  /* syslog */
+  /* syslog and start notification */
   setlogmask(log_level);
   openlog(prog_name, LOG_CONS | LOG_NDELAY, LOG_DAEMON | LOG_LOCAL1);
-
-  /* start notification */
   syslog(LOG_NOTICE, "%s (%s) from " PACKAGE_VERSION " starting...", prog_name, "server");
 
   /* daemon mode */
@@ -534,6 +532,11 @@ int main(int argc, char *argv[])
 
     drop_privileges(user, group);
   }
+
+  /* read stat now. we do so after we drop privileges
+     since we write the file with lower privileges,
+     we must also be able to read it this way. */
+  load_stat();
 
   setup_signals();
 
