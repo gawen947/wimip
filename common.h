@@ -38,6 +38,7 @@
 #define DEFAULT_PORT   18768            /* 0x4950 -> IP */
 #define DEFAULT_PORT_S stringify(DEFAULT_PORT)
 
+char * trim(char *s, bool (*istrim)(char));
 const char * basename(const char *s);
 unsigned int sockaddr_addrlen(const struct sockaddr *saddr);
 const void * sockaddr_addr(const struct sockaddr *saddr);

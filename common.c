@@ -30,6 +30,26 @@
 
 #include "common.h"
 
+/* TODO: move to string-utils.c ? */
+char * trim(char *s, bool (*istrim)(char))
+{
+  char *e;
+
+  while(istrim(*s))
+    s++;
+
+  if(*s == '\0')
+    return s;
+
+  for(e = s ; *e != '\0' ; e++);
+  for(e--   ; istrim(*e) ; e--);
+
+  *(e + 1) = '\0';
+
+  return s;
+}
+
+/* TODO: move to string-utils.c ? */
 const char * basename(const char *s)
 {
   const char *base = (const char *)strrchr(s, '/');
