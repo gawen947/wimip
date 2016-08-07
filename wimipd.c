@@ -71,7 +71,7 @@ static void save_stat(void)
   if(!stat_file)
     return;
 
-  fd = xopen(stat_file, O_WRONLY | O_TRUNC | O_CREAT, 0); /* FIXME: does not report error on syslog */
+  fd = xopen(stat_file, O_WRONLY | O_TRUNC | O_CREAT, 0660); /* FIXME: does not report error on syslog */
 
   memset(buffer, 0, sizeof(buffer));
   snprintf(buffer, STAT_BUFFER_SIZE, "%lu\n", req_count);
@@ -92,7 +92,7 @@ static void load_stat(void)
   if(!stat_file)
     return;
 
-  fd = open(stat_file, O_RDONLY, 0);
+  fd = open(stat_file, O_RDONLY, 0660);
   if(fd < 0) {
     if(errno == ENOENT)
       return; /* do not warn when there is no file */
@@ -106,7 +106,7 @@ static void load_stat(void)
   xread(fd, buffer, STAT_BUFFER_SIZE);
   close(fd); /* close early */
 
-  req_count = xatou(optarg, &err_atoi);
+  req_count = xatou(buffer, &err_atoi);
   if(err_atoi) {
     syslog(LOG_ERR,    "invalid stat in stat file");
     errx(EXIT_FAILURE, "invalid stat in stat file");
@@ -202,7 +202,7 @@ static int daemon(int nochdir, int noclose)
 static void write_pid(const char *pid_file)
 {
   char buf[32];
-  int fd = xopen(pid_file, O_WRONLY | O_TRUNC | O_CREAT, 0);
+  int fd = xopen(pid_file, O_WRONLY | O_TRUNC | O_CREAT, 0660);
 
   sprintf(buf, "%d\n", getpid());
 
