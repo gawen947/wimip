@@ -31,7 +31,7 @@
 #include "common.h"
 
 /* TODO: move to string-utils.c ? */
-char * trim(char *s, bool (*istrim)(char))
+char * trim(char *s, int (*istrim)(char))
 {
   char *e;
 
