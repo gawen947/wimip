@@ -47,6 +47,8 @@
 #include "common.h"
 #include "help.h"
 
+#define STAT_BUFFER_SIZE 32 /* buffer used to read the stat file */
+
 enum srv_flags {
   SRV_QUIET    = 0x1,  /* stay quiet in daemon mode */
   SRV_AF_INET  = 0x4,  /* listen on IPv4 */
@@ -55,13 +57,89 @@ enum srv_flags {
 };
 
 static unsigned long  req_count; /* number of requests */
-static const char    *host_name;
-static const char    *port_name;
+static unsigned int   af;        /* address family */
+static const char    *host;      /* bind host */
+static const char    *port;      /* bind port */
+static const char    *stat_file; /* file used to store the statistic */
+
+static void save_stat(void)
+{
+  char buffer[STAT_BUFFER_SIZE];
+  int fd;
+
+  /* only save when needed */
+  if(!stat_file)
+    return;
+
+  fd = xopen(stat_file, O_WRONLY | O_TRUNC | O_CREAT, 0); /* FIXME: does not report error on syslog */
+
+  memset(buffer, 0, sizeof(buffer));
+  snprintf(buffer, STAT_BUFFER_SIZE, "%lu\n", req_count);
+
+  syslog(LOG_INFO, "save stat file");
+  xwrite(fd, buffer, strlen(buffer)); /* FIXME: does not report error on syslog */
+
+  close(fd);
+}
+
+static void load_stat(void)
+{
+  char buffer[STAT_BUFFER_SIZE];
+  int  err_atoi;
+  int  fd;
+
+  /* only save when needed */
+  if(!stat_file)
+    return;
+
+  fd = open(stat_file, O_RDONLY, 0);
+  if(fd < 0) {
+    if(errno == ENOENT)
+      return; /* do not warn when there is no file */
+    syslog(LOG_ERR,   "cannot load stat file");
+    err(EXIT_FAILURE, "cannot load stat file");
+  }
+
+  memset(buffer, 0, sizeof(buffer));
+
+  syslog(LOG_INFO, "load stat file");
+  xread(fd, buffer, STAT_BUFFER_SIZE);
+  close(fd); /* close early */
+
+  req_count = xatou(optarg, &err_atoi);
+  if(err_atoi) {
+    syslog(LOG_ERR,    "invalid stat in stat file");
+    errx(EXIT_FAILURE, "invalid stat in stat file");
+  }
+}
+
+static const char * host_name(void)
+{
+  if(!host) {
+    switch(af) {
+    case AF_INET:
+      return "0.0.0.0";
+    case AF_INET6:
+      return "::";
+    default:
+      return "*";
+    }
+  }
+
+  return host;
+}
+
+static const char * port_name(void)
+{
+  return port;
+}
 
 static void log_req_number(void)
 {
-  syslog(LOG_NOTICE, "%s/%s requests: %lu", host_name, port_name, req_count);
+  syslog(LOG_NOTICE, "%s/%s requests: %lu", host_name(), port_name(), req_count);
   printf("requests: %lu\n", req_count);
+
+  save_stat();
 }
 
 static void sig_log(int signum)
@@ -170,7 +248,7 @@ static void answer(int sd, const unsigned char *buffer, ssize_t size,
   }
 }
 
-static void server(int sd, unsigned int log, unsigned long flags)
+static void server(int sd, unsigned int stat, unsigned long flags)
 {
   while(1) {
     struct sockaddr_storage from;
@@ -190,12 +268,12 @@ static void server(int sd, unsigned int log, unsigned long flags)
     answer(sd, request_buffer, n, (struct sockaddr *)&from, from_len, flags);
 
     req_count++;
-    if(log && !(req_count % log))
+    if(stat && !(req_count % stat))
       log_req_number();
   }
 }
 
-static void bind_server(const char *host, const char *port, unsigned int log, unsigned long flags)
+static void bind_server(unsigned int stat, unsigned long flags)
 {
   struct addrinfo *resolution, *r;
   struct addrinfo hints;
@@ -232,6 +310,10 @@ static void bind_server(const char *host, const char *port, unsigned int log, un
       continue;
     }
 
+    /* record address family for printing
+       remote host / port in logs */
+    af = r->ai_family;
+
     break;
   }
 
@@ -242,9 +324,9 @@ static void bind_server(const char *host, const char *port, unsigned int log, un
 
   freeaddrinfo(resolution);
 
-  syslog(LOG_INFO, "bind to %s/%s", host_name, port_name);
+  syslog(LOG_INFO, "bind to %s/%s", host_name(), port_name());
 
-  server(sd, log, flags);
+  server(sd, stat, flags);
 }
 
 static void print_help(const char *name)
@@ -261,7 +343,8 @@ static void print_help(const char *name)
     { 'G', "group",     "Relinquish privileges" },
     { 'p', "pid",       "PID file" },
     { 'l', "log-level", "Syslog level from 1 to 7" },
-    { 'L', "log",       "Report after specified number of requests"},
+    { 's', "stat",      "Report after specified number of requests"},
+    { 'S', "stat-path", "Path to a file that keep track of the stat" },
     { '4', "inet",      "Listen on IPv4 addresses" },
     { '6', "inet6",     "Listen on IPv6 addresses" },
     { 0, NULL, NULL }
@@ -274,13 +357,11 @@ int main(int argc, char *argv[])
 {
   const char    *prog_name;
   const char    *pid_file     = NULL;
-  const char    *host         = NULL;
-  const char    *port         = NULL;
   const char    *user         = NULL;
   const char    *group        = NULL;
   unsigned long  server_flags = 0;
-  unsigned int   log_level    = LOG_UPTO(LOG_NOTICE);
-  unsigned int   log          = 0;
+  unsigned int   log_level    = LOG_UPTO(LOG_INFO);
+  unsigned int   stat         = 0;
   int            exit_status  = EXIT_FAILURE;
   int            err_atoi;
 
@@ -300,7 +381,8 @@ int main(int argc, char *argv[])
     { "group", required_argument, NULL, 'G' },
     { "pid", required_argument, NULL, 'p' },
     { "log-level", required_argument, NULL, 'l' },
-    { "log", required_argument, NULL, 'L' },
+    { "stat", required_argument, NULL, 's' },
+    { "stat-path", required_argument, NULL, 'S' },
     { "inet", no_argument, NULL, '4' },
     { "inet6", no_argument, NULL, '6' },
     { NULL, 0, NULL, 0 }
@@ -309,7 +391,7 @@ int main(int argc, char *argv[])
   prog_name = basename(argv[0]);
 
   while(1) {
-    int c = getopt_long(argc, argv, "hVqdU:G:p:l:L:46", opts, NULL);
+    int c = getopt_long(argc, argv, "hVqdU:G:p:l:s:S:46", opts, NULL);
 
     if(c == -1)
       break;
@@ -362,10 +444,14 @@ int main(int argc, char *argv[])
         errx(EXIT_FAILURE, "invalid log level");
       }
       break;
-    case 'L':
-      log = xatou(optarg, &err_atoi);
-      if(err_atoi || log == 0)
-        errx(EXIT_FAILURE, "invalid log number");
+    case 's':
+      stat = xatou(optarg, &err_atoi);
+      if(err_atoi || stat == 0)
+        errx(EXIT_FAILURE, "invalid stat number");
+      break;
+    case 'S':
+      stat_file = optarg;
+      load_stat();
       break;
     case '4':
       server_flags |= SRV_AF_INET;
@@ -412,12 +498,6 @@ int main(int argc, char *argv[])
   if(!port)
     port = DEFAULT_PORT_S;
 
-  /* display bind in syslog */
-  host_name = host;
-  port_name = port;
-  if(!host)
-    host_name = "*";
-
   /* syslog */
   setlogmask(log_level);
   openlog(prog_name, LOG_CONS | LOG_NDELAY, LOG_DAEMON | LOG_LOCAL1);
@@ -452,7 +532,7 @@ int main(int argc, char *argv[])
   setup_signals();
 
   /* start the server now */
-  bind_server(host, port, log, server_flags);
+  bind_server(stat, server_flags);
 
 EXIT:
   exit(exit_status);
