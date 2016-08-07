@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <signal.h>
 #include <getopt.h>
 #include <unistd.h>
@@ -85,6 +86,7 @@ static void save_stat(void)
 static void load_stat(void)
 {
   char buffer[STAT_BUFFER_SIZE];
+  const char *buf;
   int  err_atoi;
   int  fd;
 
@@ -106,7 +108,11 @@ static void load_stat(void)
   xread(fd, buffer, STAT_BUFFER_SIZE);
   close(fd); /* close early */
 
-  req_count = xatou(buffer, &err_atoi);
+  /* xatou() does not accept whitespaces
+     so we trim the buffer before using it */
+  buf = trim(buffer, isspace);
+
+  req_count = xatou(buf, &err_atoi);
   if(err_atoi) {
     syslog(LOG_ERR,    "invalid stat in stat file");
     errx(EXIT_FAILURE, "invalid stat in stat file");
