@@ -112,7 +112,7 @@ static void load_stat(void)
      so we trim the buffer before using it */
   buf = trim(buffer, isspace);
 
-  req_count = xatou(buf, &err_atoi);
+  req_count = xatoul(buf, &err_atoi);
   if(err_atoi) {
     syslog(LOG_ERR,    "invalid stat in stat file");
     errx(EXIT_FAILURE, "invalid stat in stat file");
