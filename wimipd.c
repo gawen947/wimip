@@ -160,7 +160,9 @@ static void sig_term(int signum)
   UNUSED(signum);
 
   log_req_number();
+
   syslog(LOG_NOTICE, "exiting...");
+  exit(EXIT_SUCCESS);
 }
 
 static void setup_siglist(int signals[], struct sigaction *act, int size)
@@ -520,7 +522,7 @@ int main(int argc, char *argv[])
     port = DEFAULT_PORT_S;
 
   /* syslog and start notification */
-  openlog(prog_name, LOG_PID, LOG_DAEMON);
+  openlog(prog_name, LOG_PID, LOG_DAEMON | LOG_LOCAL0);
   setlogmask(log_level);
   syslog(LOG_NOTICE, "%s (%s) from " PACKAGE_VERSION " starting...", prog_name, "server");
 
