@@ -155,6 +155,14 @@ static void sig_log(int signum)
   log_req_number();
 }
 
+static void sig_term(int signum)
+{
+  UNUSED(signum);
+
+  log_req_number();
+  syslog(LOG_NOTICE, "exiting...");
+}
+
 static void setup_siglist(int signals[], struct sigaction *act, int size)
 {
   int i;
@@ -166,13 +174,20 @@ static void setup_siglist(int signals[], struct sigaction *act, int size)
 
 static void setup_signals(void)
 {
-  struct sigaction act_log = { .sa_handler = sig_log, .sa_flags = 0 };
+  struct sigaction act_log  = { .sa_handler = sig_log,  .sa_flags = 0 };
+  struct sigaction act_term = { .sa_handler = sig_term, .sa_flags = 0 };
 
-  int signals_log[] = {
+  int signals_log[] = { 
     SIGUSR1,
     SIGUSR2 };
 
-  setup_siglist(signals_log, &act_log, sizeof_array(signals_log));
+  int signals_term[] = { 
+    SIGHUP,
+    SIGINT,
+    SIGTERM };
+
+  setup_siglist(signals_log,  &act_log, sizeof_array(signals_log));
+  setup_siglist(signals_term, &act_term, sizeof_array(signals_term));
 }
 
 #if 0 /* for targets that do not implement daemon() */
