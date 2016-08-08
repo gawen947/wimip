@@ -98,8 +98,8 @@ static void load_stat(void)
   if(fd < 0) {
     if(errno == ENOENT)
       return; /* do not warn when there is no file */
-    syslog(LOG_ERR,   "cannot load stat file");
-    err(EXIT_FAILURE, "cannot load stat file");
+    syslog(LOG_ERR,   "cannot load stat file"); /* FIXME: what about LOG_PERROR for syslog() ? */
+    err(EXIT_FAILURE, "cannot load stat file"); /*        we could avoid using syslog() AND err() */
   }
 
   memset(buffer, 0, sizeof(buffer));
@@ -249,7 +249,7 @@ static void answer(int sd, const unsigned char *buffer, ssize_t size,
 
   n = sendto(sd, answer_buffer, len + size, 0, from, from_len);
   if(n < 0) {
-    syslog(LOG_ERR, "network error: %s", strerror(errno));
+    syslog(LOG_WARNING, "network error: %s", strerror(errno));
     warn("network error");
   }
 }
@@ -348,7 +348,7 @@ static void print_help(const char *name)
     { 'U', "user",      "Relinquish privileges" },
     { 'G', "group",     "Relinquish privileges" },
     { 'p', "pid",       "PID file" },
-    { 'l', "log-level", "Syslog level from 1 to 7" },
+    { 'l', "log-level", "Syslog level from 1 to 8" },
     { 's', "stat",      "Report after specified number of requests"},
     { 'S', "stat-path", "Path to a file that keep track of the stat" },
     { '4', "inet",      "Listen on IPv4 addresses" },
@@ -366,8 +366,8 @@ int main(int argc, char *argv[])
   const char    *user         = NULL;
   const char    *group        = NULL;
   unsigned long  server_flags = 0;
-  unsigned int   log_level    = LOG_UPTO(LOG_INFO);
   unsigned int   stat         = 0;
+  int            log_level    = LOG_UPTO(LOG_INFO);
   int            exit_status  = EXIT_FAILURE;
   int            err_atoi;
 
@@ -505,8 +505,8 @@ int main(int argc, char *argv[])
     port = DEFAULT_PORT_S;
 
   /* syslog and start notification */
+  openlog(prog_name, LOG_PID, LOG_DAEMON);
   setlogmask(log_level);
-  openlog(prog_name, LOG_CONS | LOG_NDELAY, LOG_DAEMON | LOG_LOCAL1);
   syslog(LOG_NOTICE, "%s (%s) from " PACKAGE_VERSION " starting...", prog_name, "server");
 
   /* daemon mode */
@@ -531,6 +531,7 @@ int main(int argc, char *argv[])
       errx(EXIT_FAILURE, "user and group required");
 
     drop_privileges(user, group);
+    syslog(LOG_INFO, "drop privileges");
   }
 
   /* read stat now. we do so after we drop privileges
