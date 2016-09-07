@@ -179,11 +179,11 @@ static void setup_signals(void)
   struct sigaction act_log  = { .sa_handler = sig_log,  .sa_flags = 0 };
   struct sigaction act_term = { .sa_handler = sig_term, .sa_flags = 0 };
 
-  int signals_log[] = { 
+  int signals_log[] = {
     SIGUSR1,
     SIGUSR2 };
 
-  int signals_term[] = { 
+  int signals_term[] = {
     SIGHUP,
     SIGINT,
     SIGTERM };
