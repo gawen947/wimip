@@ -42,11 +42,16 @@
 #include <assert.h>
 #include <err.h>
 
-#include "safe-call.h"
-#include "af-str.h"
-#include "xatoi.h"
-#include "common.h"
-#include "help.h"
+
+#include <gawen/safe-call.h>
+#include <gawen/string.h>
+#include <gawen/common.h>
+#include <gawen/socket.h>
+#include <gawen/xatoi.h>
+#include <gawen/help.h>
+
+#include "version.h"
+#include "wimip.h"
 
 #define STAT_BUFFER_SIZE 32 /* buffer used to read the stat file */
 
@@ -110,7 +115,7 @@ static void load_stat(void)
 
   /* xatou() does not accept whitespaces
      so we trim the buffer before using it */
-  buf = trim(buffer, isspace);
+  buf = strip(buffer, isspace);
 
   req_count = xatoul(buf, &err_atoi);
   if(err_atoi) {

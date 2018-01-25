@@ -45,14 +45,17 @@
 # include <bsd/stdlib.h>
 #endif /* __linux__ */
 
-#include "help.h"
-#include "time-substract.h"
-#include "safe-call.h"
+#include <gawen/safe-call.h>
+#include <gawen/socket.h>
+#include <gawen/common.h>
+#include <gawen/string.h>
+#include <gawen/xatoi.h>
+#include <gawen/scale.h>
+#include <gawen/help.h>
+#include <gawen/time.h>
+
 #include "version.h"
-#include "xatoi.h"
-#include "scale.h"
-#include "af-str.h"
-#include "common.h"
+#include "wimip.h"
 
 #define TRIES       1
 #define TIMEOUT     2000         /* default timeout */
@@ -168,7 +171,7 @@ static int response(const unsigned char *res, unsigned int size,
 static void display_rtt(struct timespec *begin, struct timespec *end)
 {
   uint64_t nsec = substract_nsec(begin, end);
-  printf(" => %s", scale_time(nsec));
+  printf(" => %s", scale_nsec(nsec));
 }
 
 static int send_request(const struct addrinfo *resolution, const struct remote *remote,

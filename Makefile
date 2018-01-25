@@ -1,7 +1,7 @@
 include commands.mk
 
 CFLAGS  := -std=c99 -fPIC -Wall
-LDFLAGS :=
+LDFLAGS := -lgawen
 
 SRC  = $(wildcard *.c)
 OBJ  = $(foreach obj, $(SRC:.c=.o), $(notdir $(obj)))
@@ -9,8 +9,8 @@ DEP  = $(SRC:.c=.d)
 
 TARGETS     = wimip wimipd
 
-SERVER_OBJ = wimipd.o help.o xatoi.o version.o safe-call.o af-str.o common.o
-CLIENT_OBJ = wimip.o help.o safe-call.o version.o common.o xatoi.o time-substract.o scale.o af-str.o
+SERVER_OBJ = wimipd.o version.o
+CLIENT_OBJ = wimip.o version.o
 
 PREFIX  ?= /usr/local
 BIN     ?= /bin
@@ -18,7 +18,7 @@ SBIN    ?= /sbin
 
 ifeq ($(OS),Linux)
 	CFLAGS  += -D_BSD_SOURCE=1 -D_POSIX_C_SOURCE=199309L
-	LDFLAGS := -lbsd
+	LDFLAGS += -lbsd
 endif
 
 commit = $(shell ./hash.sh)
