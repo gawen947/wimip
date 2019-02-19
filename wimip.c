@@ -171,7 +171,7 @@ static int response(const unsigned char *res, unsigned int size,
 static void display_rtt(struct timespec *begin, struct timespec *end)
 {
   uint64_t nsec = substract_nsec(begin, end);
-  printf(" => %s", scale_nsec(nsec));
+  printf(" => %s", scale_nsec_u64(nsec));
 }
 
 static int send_request(const struct addrinfo *resolution, const struct remote *remote,
